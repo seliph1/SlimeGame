@@ -1,13 +1,21 @@
 local loveframes = require "lib.loveframes"
+local sti = require "lib.sti"
+local client = require "core.client"
 
+local map
 function love.load()
+	--loveframes.Create("frame")
+	map = sti("maps/mapateste.lua")
 end
 
 function love.update( dt )
 	loveframes.update(dt)
+	map:update()
+
 end
 
 function love.draw()
+	map:draw()
 	loveframes.draw()
 end
 
