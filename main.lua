@@ -1,50 +1,55 @@
+require "legacy"
 local loveframes = require "lib.loveframes"
+local console = require "core.console"
 local sti = require "lib.sti"
 local client = require "core.client"
 
-local map
 function love.load()
-	--loveframes.Create("frame")
-	map = sti("maps/mapateste.lua")
+	client.load()
 end
 
 function love.update( dt )
+	client.update( dt )
 	loveframes.update(dt)
-	map:update()
-
 end
 
 function love.draw()
-	map:draw()
+	client.draw()
 	loveframes.draw()
 end
 
 function love.mousepressed(x, y, button, istouch, presses)
 	loveframes.mousepressed(x, y, button, istouch, presses)
 	if loveframes.GetInputObject() == false and loveframes.GetCollisionCount() < 1 then
+		client.mousepressed()
 	end
 end
 
 function love.mousereleased(x, y, button, istouch, presses)
 	loveframes.mousereleased(x, y, button, istouch, presses)
+	client.mousereleased()
 end
 
 function love.mousemoved(x, y, dx, dy, istouch)
 	loveframes.mousemoved(x, y, dx, dy, istouch)
+	client.mousemoved()
 end
 
 function love.wheelmoved(x, y)
 	loveframes.wheelmoved(x, y)
+	client.wheelmoved()
 end
 
 function love.keypressed(key, unicode)
 	loveframes.keypressed(key, unicode)
 	if not loveframes.GetInputObject() then
+		client.keypressed()
 	end
 end
 
 function love.keyreleased(key, unicode)
 	loveframes.keyreleased(key)
+	client.keyreleased()
 end
 
 function love.textinput(text)

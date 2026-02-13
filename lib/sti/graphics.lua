@@ -25,9 +25,9 @@ function graphics.newQuad(...)
 	end
 end
 
-function graphics.getCanvas(...)
+function graphics.getCanvas()
 	if graphics.isCreated then
-		return lg.getCanvas(...)
+		return lg.getCanvas()
 	end
 end
 
@@ -49,9 +49,9 @@ function graphics.push(...)
 	end
 end
 
-function graphics.origin(...)
+function graphics.origin()
 	if graphics.isCreated then
-		return lg.origin(...)
+		return lg.origin()
 	end
 end
 
@@ -67,9 +67,9 @@ function graphics.translate(...)
 	end
 end
 
-function graphics.pop(...)
+function graphics.pop()
 	if graphics.isCreated then
-		return lg.pop(...)
+		return lg.pop()
 	end
 end
 
@@ -85,9 +85,9 @@ function graphics.rectangle(...)
 	end
 end
 
-function graphics.getColor(...)
+function graphics.getColor()
 	if graphics.isCreated then
-		return lg.getColor(...)
+		return lg.getColor()
 	end
 end
 
