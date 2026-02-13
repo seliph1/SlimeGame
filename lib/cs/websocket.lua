@@ -5,8 +5,8 @@ by flaribbit
 usage:
     local client = require("websocket").new("127.0.0.1", 5000)
     function client:onmessage(s) print(s) end
-    function client:onopen() self:send("hello from love2d") end
-    function client:onclose() print("closed") end
+    function client:onconnect() self:send("hello from love2d") end
+    function client:ondisconnect() print("closed") end
 
     function love.update()
         client:update()
@@ -45,10 +45,10 @@ local _M = {
     STATUS = STATUS,
 }
 _M.__index = _M
-function _M:onopen() end
+function _M:onconnect(code) end
 function _M:onmessage(message) end
 function _M:onerror(error) end
-function _M:onclose(code, reason) end
+function _M:ondisconnect(code, reason) end
 
 ---create websocket connection
 ---@param host string
@@ -114,7 +114,7 @@ end
 
 ---read a message
 ---@return string|nil res message
----@return number|nil head websocket frame header
+---@return integer|nil head websocket frame header
 ---@return string|nil err error message
 function _M:read()
     local res, err, part
@@ -196,14 +196,14 @@ function _M:update()
             self.status = STATUS.CONNECTING
             self._length = 2
         elseif self._length>600 then
-            self:onerror("connection failed")
+            self:onerror("ws: connection failed")
             self.status = STATUS.CLOSED
         end
     elseif self.status==STATUS.CONNECTING then
         local res = sock:receive("*l")
         if res then
             repeat res = sock:receive("*l") until res==""
-            self:onopen()
+            self:onconnect(200)
             self.status = STATUS.OPEN
         end
     elseif self.status==STATUS.OPEN or self.status==STATUS.CLOSING then
@@ -212,7 +212,7 @@ function _M:update()
             if err=="closed" then
                 self.status = STATUS.CLOSED
                 return
-            elseif res==nil then
+            elseif res == nil or head == nil then
                 return
             end
             local opcode = band(head, 0x0f)
@@ -220,9 +220,9 @@ function _M:update()
             if opcode==OPCODE.CLOSE then
                 if res~="" then
                     local code = shl(res:byte(1), 8) + res:byte(2)
-                    self:onclose(code, res:sub(3))
+                    self:ondisconnect(code, res:sub(3))
                 else
-                    self:onclose(1005, "")
+                    self:ondisconnect(1005, "")
                 end
                 sock:close()
                 self.status = STATUS.CLOSED

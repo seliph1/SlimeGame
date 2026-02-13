@@ -1,3 +1,4 @@
+---@diagnostic disable: duplicate-set-field
 require "legacy"
 local loveframes = require "lib.loveframes"
 local console = require "core.console"

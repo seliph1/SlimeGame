@@ -4,42 +4,34 @@
 		{
 			"type": "lua-local",
 			"request": "launch",
-			"name": "LOVE 11.5",
+			"name": "Client",
 			"program": {
 				"command": "C:/LOVE2D/love.exe",
 			},
 			"args": [
 				".",
-				"discord"
-			],
-			"scriptRoots": ["game", ".", "src"]
-		},
-		{
-			"type": "lua-local",
-			"request": "launch",
-			"name": "LOVE 11.5 (debug)",
-			"program": {
-				"command": "C:/LOVE2D/love.exe"
-			},
-			"args": [
-				".",
-				"debug",
 			],
 			"scriptRoots": ["game", ".", "src"]
 		},
 
-
 		{
 			"type": "lua-local",
 			"request": "launch",
-			"name": "LOVE 12",
+			"name": "Server",
 			"program": {
-				"command": "C:/LOVE2D/nightly/love.exe"
+				"command": "C:/LOVE2D/love.exe",
 			},
 			"args": [
-				".",
+				"./server/",
 			],
 			"scriptRoots": ["game", ".", "src"]
 		},
 	],
+	"compounds": [
+		{
+			"name": "Client/Server",
+			"configurations": ["Client","Server"],
+			"stopAll": true
+		}
+	]
 }

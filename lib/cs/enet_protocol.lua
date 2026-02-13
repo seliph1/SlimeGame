@@ -22,32 +22,15 @@ return function(cs)
         end
         print("CS: client peer started ("..tostring( cs.host)..")")
         print("CS: attempting connection to: "..address)
-         cs.host:connect(address, cs.numChannels)
+        cs.host:connect(address, cs.numChannels)
     end
 
     function cs.reset()
-        cs.connected = false
-        cs.joined = false
-        cs.id = nil
-        for k in pairs(cs.share) do
-            cs.share[k] = nil
-        end
-        for k in pairs(cs.home) do
-            cs.home[k] = nil
+        if cs.resetflags then
+            cs.resetflags()
         end
         cs.host = nil
         cs.peer = nil
-
-        cs.inputSequence = 0
-        cs.remoteInputSequence = 0
-
-        cs.stateBuffer:clear()
-        cs.inputCache:clear()
-        cs.snapshot:clear()
-        cs.inputSequence = 0
-        cs.lastState = nil
-
-        collectgarbage("collect")
     end
 
     function cs.sendExt(channel, flag, ...)
@@ -79,11 +62,11 @@ return function(cs)
         end
     end
 
-    function cs.getENetHost()
+    function cs.getHost()
         return cs.host
     end
 
-    function cs.getENetPeer()
+    function cs.getPeer()
         return cs.peer
     end
 
@@ -98,6 +81,7 @@ return function(cs)
 
             -- Connected with server?
             if event.type == 'connect' then
+                cs.peer = event.peer
                 -- Ignore this, wait till we receive id (see below)
                 cs.connect_handler(event)
             end

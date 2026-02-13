@@ -1,7 +1,7 @@
 local cs = {}
 -- Get the current lib path
 local lib_path = (...):gsub('%.init$', '') .. "."
-
+cs.lib_path = lib_path
 -- Load required libs
 cs.cbor = require( lib_path.."cbor" )
 cs.state = require( lib_path.."state" )
@@ -44,6 +44,28 @@ cs.stateDumpOpts = { comment = false }
 cs.inputEnabled = true
 cs.binds = {}
 
+function cs.resetflags()
+    cs.connected = false
+    cs.joined = false
+    cs.id = nil
+    for k in pairs(cs.share) do
+        cs.share[k] = nil
+    end
+    for k in pairs(cs.home) do
+        cs.home[k] = nil
+    end
+    cs.inputSequence = 0
+    cs.remoteInputSequence = 0
+
+    cs.stateBuffer:clear()
+    cs.inputCache:clear()
+    cs.snapshot:clear()
+    cs.inputSequence = 0
+    cs.lastState = nil
+
+    collectgarbage("collect")
+end
+
 -- Load share.lua variable pointers
 local state = cs.state
 local share = {}
@@ -60,12 +82,13 @@ cs.home = home
 
 -- Fill the table with required network procedures.
 -- Usually enet or websocket
-require ( lib_path .. "enet_protocol" ) (cs)
+
+--require ( lib_path .. "enet_protocol" ) (cs)
+require ( lib_path .. "websocket_protocol" ) (cs)
 
 function cs.sendInput(key, act)
-    if not cs.joined then return end
     local bind = cs.binds[key]
-    if not (bind and cs.peer and cs.inputEnabled) then return end
+    if not (cs.joined and cs.inputEnabled and bind) then return end
     act = act or state.DIFF_NIL
 
     if bind.type == "stream" then
@@ -142,7 +165,7 @@ function cs.sendState(dt)
     end
 
     -- Runs through the table and sends the input stream to server
-    if cs.peer and cs.inputEnabled and inputStream then
+    if cs.joined and cs.inputEnabled and inputStream then
         cs.inputSequence = cs.inputSequence + 1
         local inputState = {
             inputStream = inputStream,
@@ -167,7 +190,7 @@ function cs.sendState(dt)
     end
 
     -- Send home updates to server
-    if cs.peer then
+    if cs.joined then
         local diff = cs.home:__diff()
         if diff ~= nil then
             local homeState = {
@@ -186,7 +209,7 @@ function cs.request_handler(event)
 
     --print(string.format("%sb: %s", #event.data, event.data))
 
-   	-- SERVER/cs PACKAGE MANAGER
+   	-- SERVER/CLIENT PACKAGE MANAGER
 	----------------------------------------------------------------------------
     -- Diff / exact? (do this first so we have it in `.connect` below)
     if request.diff then
@@ -231,10 +254,10 @@ function cs.request_handler(event)
         end
     end
 
-	-- SERVER/cs AUTHENTICATION
+	-- SERVER/CLIENT AUTHENTICATION
 	----------------------------------------------------------------------------
     if request.id then
-        -- Turn on the connected flags and assing us a ID from server
+        -- Turn on the connected flags and assign us a ID from server
         cs.connected = true
         cs.id = request.id
 
@@ -255,7 +278,7 @@ function cs.request_handler(event)
             widescreen = true,
         }
 
-        cs.sendData({
+        cs.sendTable({
             sessionToken = cs.sessionToken,
             name = cs.name,
             version = cs.version,

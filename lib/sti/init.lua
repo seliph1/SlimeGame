@@ -271,6 +271,7 @@ function Map:setAtlasTiles(index, tileset, coords, gid)
     local imageH    = tileset.image:getHeight()
 
     local firstgid = tileset.firstgid
+	local terrain
     for i = 1, #tileset.tiles do
         local tile = tileset.tiles[i]
         if tile.terrain then
