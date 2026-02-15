@@ -166,6 +166,9 @@ function _M:send(message)
     send(self.socket, OPCODE.TEXT, message)
 end
 
+function _M:sendBinary(message)
+    send(self.socket, OPCODE.BINARY, message)
+end
 ---send a ping message
 ---@param message string
 function _M:ping(message)
@@ -196,7 +199,7 @@ function _M:update()
             self.status = STATUS.CONNECTING
             self._length = 2
         elseif self._length>600 then
-            self:onerror("ws: connection failed")
+            self:onerror("websocket: connection failed")
             self.status = STATUS.CLOSED
         end
     elseif self.status==STATUS.CONNECTING then

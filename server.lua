@@ -1,6 +1,5 @@
 ---@diagnostic disable: duplicate-set-field
 
-
 function love.load()
 end
 

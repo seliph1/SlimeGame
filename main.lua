@@ -1,4 +1,40 @@
----@diagnostic disable: duplicate-set-field
+---@diagnostic disable: duplicate-set-field, undefined-field
+
+local program_mode = ""
+local initializer = {
+	debug = function()
+		-- VS Code debugger
+		local lldebugger = require "lldebugger"
+		if lldebugger then
+			lldebugger.start()
+		end
+	end,
+
+	server = function()
+		program_mode = "server"
+	end,
+
+	client = function()
+		program_mode = "client"
+	end,
+}
+local arguments = love.arg.parseGameArguments(arg)
+if arguments and type(arguments) == "table" then
+	for index, argument in pairs(arguments) do
+		if initializer[argument] then
+			initializer[argument]()
+		end
+	end
+end
+
+if program_mode == "server" then
+	local server = require "server"
+	return
+elseif program_mode == "client" then
+end
+
+--------------------------------------------------------------------
+
 require "legacy"
 local loveframes = require "lib.loveframes"
 local console = require "core.console"
@@ -6,7 +42,7 @@ local sti = require "lib.sti"
 local client = require "core.client"
 
 function love.load()
-	client.load()
+	love.keyboard.setTextInput(true)
 end
 
 function love.update( dt )

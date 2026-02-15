@@ -366,7 +366,11 @@ function cs.connect_handler(event)
     if cs.connect_attempt then
         cs.connect_attempt()
     end
-    print("CS: connection attempt")
+    local request = decode(event.data)
+    if not request then return end
+    if request.address then
+        print("CS: connected to "..request.address)
+    end
 end
 
 function cs.disconnect_handler(event)

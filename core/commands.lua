@@ -305,6 +305,27 @@ local commands = {
 		end
 	};
 
+	send = {
+		action = function(...)
+			local client = require "core.client"
+			local message = table.concat({...}, " ")
+			local host = client.getHost()
+
+			if host then
+				print("Message sent: ".. message)
+				client.sendMessage(message)
+			end
+		end
+	},
+
+	cbor = {
+		action = function(...)
+			local client = require "core.client"
+			client.sendTable({ test = 1 })
+
+		end
+	},
+
 	rcon = {
 		action = function(...)
 			local command = table.concat({...}, " ")
