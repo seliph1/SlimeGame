@@ -3,8 +3,10 @@ local utils = {}
 
 -- https://github.com/stevedonovan/Penlight/blob/master/lua/pl/path.lua#L286
 function utils.format_path(path)
-	local np_gen1,np_gen2  = '[^SEP]+SEP%.%.SEP?','SEP+%.?SEP'
+	local np_gen1, np_gen2  = '[^SEP]+SEP%.%.SEP?','SEP+%.?SEP'
 	local np_pat1, np_pat2 = np_gen1:gsub('SEP','/'), np_gen2:gsub('SEP','/')
+	local np_gen3 = '^..SEP'
+	local np_pat3 = np_gen3:gsub('SEP','/')
 	local k
 
 	repeat -- /./ -> /
@@ -15,6 +17,7 @@ function utils.format_path(path)
 		path,k = path:gsub(np_pat1,'',1)
 	until k == 0
 
+	path = path:gsub(np_pat3,'') -- ../ -> (empty)
 	if path == '' then path = '.' end
 
 	return path

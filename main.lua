@@ -38,7 +38,6 @@ end
 require "legacy"
 local loveframes = require "lib.loveframes"
 local console = require "core.console"
-local sti = require "lib.sti"
 local client = require "core.client"
 
 function love.load()

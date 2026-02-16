@@ -248,7 +248,7 @@ function Map:setTiles(index, tileset, gid)
 				sx          = 1,
 				sy          = 1,
 				r           = 0,
-				offset      = tileset.tileoffset,
+				offset      = tileset.tileoffset or {x=0, y=0},
 			}
 
 			self.tiles[gid] = tile
@@ -303,7 +303,7 @@ function Map:setAtlasTiles(index, tileset, coords, gid)
             sx          = 1,
             sy          = 1,
             r           = 0,
-            offset      = tileset.tileoffset,
+            offset      = tileset.tileoffset or {x=0, y=0},
         }
 
         -- Be aware that in collections self.tiles can be a sparse array

@@ -191,7 +191,6 @@ function requestHandler(data, isBinary) {
 
         if (request.version) {
             log(1, "server", "Client version: " + request.version)
-            console.log(request.version, server.version)
             if (request.version !== server.version) {
                 send(peer, {
                     warning: "Connection refused: client version mismatch"
@@ -296,16 +295,15 @@ function disconnectHandler(code, reason) {
     })
 }
 
-function changingCallback() {}
-function changedCallback() {}
-function identityCallback() {}
-function prejoinCallback() {}
-function joinCallback() {}
-function receiveCallback() {}
-function disconnectCallback() {}
-function connectCallback() {}
+function changingCallback(peer_id) {}
+function changedCallback(peer_id) {}
+function identityCallback(peer_id) {}
+function prejoinCallback(peer_id) {}
+function joinCallback(peer_id) {}
+function receiveCallback(peer_id) {}
+function disconnectCallback(peer_id) {}
+function connectCallback(peer_id) {}
  
-
 module.exports = {
     server: server,
     send,

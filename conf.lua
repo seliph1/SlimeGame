@@ -18,6 +18,7 @@ local initializer = {
     client = function(t)
         t.title = "SlimeGame Client"
         t.author = "Gabriel Mendes (seliph1)"
+        --t.window.vsync = 0
 	end,
 }
 
