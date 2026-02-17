@@ -388,12 +388,10 @@ function Map:setTileData(layer)
 		map[y] = {}
 		for x = 1, layer.width do
 			local gid = layer.data[i]
-
 			-- NOTE: Empty tiles have a GID of 0
 			if gid > 0 then
 				map[y][x] = self.tiles[gid] or self:setFlippedGID(gid)
 			end
-
 			i = i + 1
 		end
 	end
@@ -921,16 +919,6 @@ function Map:draw(tx, ty, sx, sy)
 			lg.translate(-px, -py)
 		end
 	end
-
-	--[[
-	lg.translate(math.floor(tx or 0), math.floor(ty or 0))
-
-	for _, layer in ipairs(self.layers) do
-		if layer.visible and layer.opacity > 0 then
-			self:drawLayer(layer)
-		end
-	end
-	]]
 
 	lg.pop()
 

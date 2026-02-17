@@ -1,5 +1,6 @@
+local serpent = require "lib.serpent"
 -- Conversor TMX para formato STI (Simple Tiled Implementation)
--- Permite usar arquivos .tmx diretamente com STI
+-- COM SUPORTE A MAPAS INFINITOS (CHUNKS)
 
 local sti_loader = {}
 
@@ -63,10 +64,12 @@ local function find_child(element, tag_name)
     end
 end
 
-local function find_children(element, tag_name)
+local function find_children(element, ...)
     local results = {}
     for _, child in ipairs(element.children) do
-        if child.tag == tag_name then table.insert(results, child) end
+        for _, tag_name in ipairs({...}) do
+            if child.tag == tag_name then table.insert(results, child) end
+        end
     end
     return results
 end
@@ -97,6 +100,28 @@ local function parse_properties(element)
     return props
 end
 
+-- Parse dados de chunk (para mapas infinitos)
+local function parse_chunk_data(chunk_elem)
+    local tiles = {}
+    local encoding = chunk_elem.attrs.encoding
+    local width = tonumber(chunk_elem.attrs.width)
+    local height = tonumber(chunk_elem.attrs.height)
+
+    if encoding == "csv" then
+        local csv_data = chunk_elem.text
+        for value in csv_data:gmatch("[^,]+") do
+            table.insert(tiles, tonumber(value:match("^%s*(.-)%s*$")))
+        end
+    else
+        -- Formato XML
+        for _, tile_elem in ipairs(find_children(chunk_elem, "tile")) do
+            table.insert(tiles, tonumber(tile_elem.attrs.gid or 0))
+        end
+    end
+    
+    return tiles
+end
+
 -- Parse dados de layer (CSV ou XML)
 local function parse_layer_data(data_elem, width, height)
     local tiles = {}
@@ -117,14 +142,146 @@ local function parse_layer_data(data_elem, width, height)
     return tiles
 end
 
+local function parse_layer(layer_elem)
+    local layer = {
+        type = "tilelayer",
+        id = tonumber(layer_elem.attrs.id),
+        name = layer_elem.attrs.name,
+        class = layer_elem.attrs.class,
+        width = tonumber(layer_elem.attrs.width) or 0,
+        height = tonumber(layer_elem.attrs.height) or 0,
+        visible = layer_elem.attrs.visible ~= "0",
+        opacity = tonumber(layer_elem.attrs.opacity or 1),
+        offsetx = tonumber(layer_elem.attrs.offsetx or 0),
+        offsety = tonumber(layer_elem.attrs.offsety or 0),
+        parallaxx = tonumber(layer_elem.attrs.offsetx or 1),
+        parallaxy = tonumber(layer_elem.attrs.offsety or 1),
+        properties = parse_properties(layer_elem),
+        encoding = "lua", -- STI espera "lua" para arrays
+    }
+
+    -- Parse data
+    local data_elem = find_child(layer_elem, "data")
+    if data_elem then
+        -- Verifica se tem chunks (mapa infinito)
+        local chunk_elems = find_children(data_elem, "chunk")
+        if #chunk_elems > 0 then
+            -- MODO INFINITO: armazena chunks
+            layer.chunks = {}
+            for _, chunk_elem in ipairs(chunk_elems) do
+                chunk_elem.attrs.encoding = data_elem.attrs.encoding
+                local chunk = {
+                    x = tonumber(chunk_elem.attrs.x),
+                    y = tonumber(chunk_elem.attrs.y),
+                    width = tonumber(chunk_elem.attrs.width),
+                    height = tonumber(chunk_elem.attrs.height),
+                    data = parse_chunk_data(chunk_elem)
+                }
+                table.insert(layer.chunks, chunk)
+            end
+            layer.infinite = true
+            layer.data = nil
+        else
+            -- MODO NORMAL: dados contíguos
+            layer.data = parse_layer_data(data_elem, layer.width, layer.height)
+            layer.infinite = false
+        end
+    end
+    return layer
+end
+
+local function parse_objectgroup(objgroup_elem)
+    -- Parse object groups
+    local objgroup = {
+        type = "objectgroup",
+        id = tonumber(objgroup_elem.attrs.id),
+        name = objgroup_elem.attrs.name,
+        class = objgroup_elem.attrs.class,
+        visible = objgroup_elem.attrs.visible ~= "0",
+        opacity = tonumber(objgroup_elem.attrs.opacity or 1),
+        offsetx = tonumber(objgroup_elem.attrs.offsetx or 0),
+        offsety = tonumber(objgroup_elem.attrs.offsety or 0),
+        parallaxx = tonumber(objgroup_elem.attrs.offsetx or 1),
+        parallaxy = tonumber(objgroup_elem.attrs.offsety or 1),
+        draworder = objgroup_elem.attrs.draworder or "topdown",
+        properties = parse_properties(objgroup_elem),
+        objects = {}
+    }
+
+    for _, obj_elem in ipairs(find_children(objgroup_elem, "object")) do
+        local obj = {
+            id = tonumber(obj_elem.attrs.id),
+            name = obj_elem.attrs.name or "",
+            type = obj_elem.attrs.type or obj_elem.attrs.class or "",
+            shape = "rectangle",
+            x = tonumber(obj_elem.attrs.x),
+            y = tonumber(obj_elem.attrs.y),
+            width = tonumber(obj_elem.attrs.width or 0),
+            height = tonumber(obj_elem.attrs.height or 0),
+            rotation = tonumber(obj_elem.attrs.rotation or 0),
+            gid = tonumber(obj_elem.attrs.gid),
+            visible = obj_elem.attrs.visible ~= "0",
+            properties = parse_properties(obj_elem)
+        }
+        -- Formas especiais
+        if find_child(obj_elem, "ellipse") then
+            obj.shape = "ellipse"
+        elseif find_child(obj_elem, "point") then
+            obj.shape = "point"
+        elseif find_child(obj_elem, "polygon") then
+            obj.shape = "polygon"
+            obj.polygon = {}
+            local points_str = find_child(obj_elem, "polygon").attrs.points
+            for point in points_str:gmatch("([^%s]+)") do
+                local x, y = point:match("([^,]+),([^,]+)")
+                table.insert(obj.polygon, {x = tonumber(x), y = tonumber(y)})
+            end
+        elseif find_child(obj_elem, "polyline") then
+            obj.shape = "polyline"
+            obj.polyline = {}
+            local points_str = find_child(obj_elem, "polyline").attrs.points
+            for point in points_str:gmatch("([^%s]+)") do
+                local x, y = point:match("([^,]+),([^,]+)")
+                table.insert(obj.polyline, {x = tonumber(x), y = tonumber(y)})
+            end
+        end
+        table.insert(objgroup.objects, obj)
+    end
+    return objgroup
+end
+
+local function parse_imagelayer(imagelayer_elem)
+    local imagelayer = {
+        type = "imagelayer",
+        id = tonumber(imagelayer_elem.attrs.id),
+        class = imagelayer_elem.attrs.class,
+        name = imagelayer_elem.attrs.name,
+        visible = imagelayer_elem.attrs.visible ~= "0",
+        opacity = tonumber(imagelayer_elem.attrs.opacity or 1),
+        offsetx = tonumber(imagelayer_elem.attrs.offsetx or 0),
+        offsety = tonumber(imagelayer_elem.attrs.offsety or 0),
+        parallaxx = tonumber(imagelayer_elem.attrs.offsetx or 1),
+        parallaxy = tonumber(imagelayer_elem.attrs.offsety or 1),
+        repeatx = imagelayer_elem.attrs.repeatx ~= "0",
+        repeaty = imagelayer_elem.attrs.repeaty ~= "0",
+        properties = parse_properties(imagelayer_elem),
+    }
+    local image_elem = find_child(imagelayer_elem, "image")
+    if image_elem then
+        imagelayer.image = image_elem.attrs.source
+    end
+    return imagelayer
+end
+
+local function parse_group(layer_elem)
+end
+
 -- Converte TMX para formato STI
 function sti_loader.parse_tmx(xml_string)
     local root = parse_xml(xml_string)
-    
     if root.tag ~= "map" then
         error("XML não é um arquivo TMX válido")
     end
-    
     -- Estrutura base compatível com STI
     local map = {
         version = root.attrs.version,
@@ -132,10 +289,11 @@ function sti_loader.parse_tmx(xml_string)
         tiledversion = root.attrs.tiledversion,
         orientation = root.attrs.orientation or "orthogonal",
         renderorder = root.attrs.renderorder or "right-down",
-        width = tonumber(root.attrs.width),
-        height = tonumber(root.attrs.height),
+        width = tonumber(root.attrs.width) or 0,
+        height = tonumber(root.attrs.height) or 0,
         tilewidth = tonumber(root.attrs.tilewidth),
         tileheight = tonumber(root.attrs.tileheight),
+        infinite = root.attrs.infinite == "1", -- Suporte a mapas infinitos
         nextlayerid = tonumber(root.attrs.nextlayerid),
         nextobjectid = tonumber(root.attrs.nextobjectid),
         properties = {},
@@ -224,103 +382,38 @@ function sti_loader.parse_tmx(xml_string)
                     })
                 end
             end
-            
-			if tile_id then
-            	tileset.tiles[tile_id] = tile
-			end
+            if tile_id then
+                tileset.tiles[tile_id] = tile
+            end
         end
-        
         table.insert(map.tilesets, tileset)
     end
-    
+
     -- Parse layers
-    for _, layer_elem in ipairs(find_children(root, "layer")) do
-        local layer = {
-            type = "tilelayer",
-            id = tonumber(layer_elem.attrs.id),
-            name = layer_elem.attrs.name,
-            x = tonumber(layer_elem.attrs.x or 0),
-            y = tonumber(layer_elem.attrs.y or 0),
-            width = tonumber(layer_elem.attrs.width),
-            height = tonumber(layer_elem.attrs.height),
-            visible = layer_elem.attrs.visible ~= "0",
-            opacity = tonumber(layer_elem.attrs.opacity or 1),
-            offsetx = tonumber(layer_elem.attrs.offsetx or 0),
-            offsety = tonumber(layer_elem.attrs.offsety or 0),
-            properties = parse_properties(layer_elem),
-            encoding = "lua", -- STI espera "lua" para arrays
-            data = {}
-        }
-        
-        -- Parse data
-        local data_elem = find_child(layer_elem, "data")
-        if data_elem then
-            layer.data = parse_layer_data(data_elem, layer.width, layer.height)
+    local layer_types = {
+        "layer",
+        "imagelayer",
+        "objectgroup",
+        "group"
+    }
+
+    for _, layer_elem in ipairs(find_children(root, unpack(layer_types))) do
+        local layer
+        if layer_elem.tag == "layer" then
+            layer = parse_layer(layer_elem)
+        elseif layer_elem.tag == "imagelayer" then
+            layer = parse_imagelayer(layer_elem)
+        elseif layer_elem.tag == "group" then
+            layer = parse_group(layer_elem)
+        elseif layer_elem.tag == "objectgroup" then
+            layer = parse_objectgroup(layer_elem)
         end
-        
-        table.insert(map.layers, layer)
-    end
-    
-    -- Parse object groups
-    for _, objgroup_elem in ipairs(find_children(root, "objectgroup")) do
-        local objgroup = {
-            type = "objectgroup",
-            id = tonumber(objgroup_elem.attrs.id),
-            name = objgroup_elem.attrs.name,
-            visible = objgroup_elem.attrs.visible ~= "0",
-            opacity = tonumber(objgroup_elem.attrs.opacity or 1),
-            offsetx = tonumber(objgroup_elem.attrs.offsetx or 0),
-            offsety = tonumber(objgroup_elem.attrs.offsety or 0),
-            draworder = objgroup_elem.attrs.draworder or "topdown",
-            properties = parse_properties(objgroup_elem),
-            objects = {}
-        }
-        
-        for _, obj_elem in ipairs(find_children(objgroup_elem, "object")) do
-            local obj = {
-                id = tonumber(obj_elem.attrs.id),
-                name = obj_elem.attrs.name or "",
-                type = obj_elem.attrs.type or obj_elem.attrs.class or "",
-                shape = "rectangle",
-                x = tonumber(obj_elem.attrs.x),
-                y = tonumber(obj_elem.attrs.y),
-                width = tonumber(obj_elem.attrs.width or 0),
-                height = tonumber(obj_elem.attrs.height or 0),
-                rotation = tonumber(obj_elem.attrs.rotation or 0),
-                gid = tonumber(obj_elem.attrs.gid),
-                visible = obj_elem.attrs.visible ~= "0",
-                properties = parse_properties(obj_elem)
-            }
-            
-            -- Formas especiais
-            if find_child(obj_elem, "ellipse") then
-                obj.shape = "ellipse"
-            elseif find_child(obj_elem, "point") then
-                obj.shape = "point"
-            elseif find_child(obj_elem, "polygon") then
-                obj.shape = "polygon"
-                obj.polygon = {}
-                local points_str = find_child(obj_elem, "polygon").attrs.points
-                for point in points_str:gmatch("([^%s]+)") do
-                    local x, y = point:match("([^,]+),([^,]+)")
-                    table.insert(obj.polygon, {x = tonumber(x), y = tonumber(y)})
-                end
-            elseif find_child(obj_elem, "polyline") then
-                obj.shape = "polyline"
-                obj.polyline = {}
-                local points_str = find_child(obj_elem, "polyline").attrs.points
-                for point in points_str:gmatch("([^%s]+)") do
-                    local x, y = point:match("([^,]+),([^,]+)")
-                    table.insert(obj.polyline, {x = tonumber(x), y = tonumber(y)})
-                end
-            end
-            
-            table.insert(objgroup.objects, obj)
+
+        if layer then
+            table.insert(map.layers, layer)
         end
-        
-        table.insert(map.layers, objgroup)
     end
-    
+
     return map
 end
 
@@ -340,32 +433,6 @@ end
 function sti_loader:load(filename)
     return sti_loader.load_tmx(filename)
 end
-
---[[
--- Wrapper para STI: permite usar .tmx ou .lua
-function sti_loader.new_sti_loader(original_sti)
-    local sti = original_sti or require("sti")
-    local original_call = sti.__call
-    
-    -- Intercepta chamadas ao STI
-    sti.__call = function(_, map, plugins, ox, oy)
-        -- Se for string, verifica extensão
-        if type(map) == "string" then
-            local ext = map:sub(-4):lower()
-            
-            if ext == ".tmx" or ext == ".xml" then
-                -- Carrega TMX e converte para formato STI
-                map = sti_loader.load_tmx(map)
-            end
-        end
-        
-        -- Chama o STI original
-        return original_call(_, map, plugins, ox, oy)
-    end
-    
-    return sti
-end
-]]
 
 setmetatable(sti_loader, {__call = sti_loader.load})
 

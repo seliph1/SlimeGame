@@ -5,6 +5,7 @@
 -- @license MIT/X11
 
 local lg = require((...):gsub('plugins.bump', 'graphics'))
+local serpent = require "lib.serpent"
 
 return {
 	bump_LICENSE        = "MIT/X11",
@@ -18,15 +19,15 @@ return {
 	bump_init = function(map, world)
 		local collidables = {}
 
-		for _, tileset in ipairs(map.tilesets) do
-			for _, tile in ipairs(tileset.tiles) do
+		for _, tileset in pairs(map.tilesets) do
+			for _, tile in pairs(tileset.tiles) do
 				local gid = tileset.firstgid + tile.id
 
 				if map.tileInstances[gid] then
-					for _, instance in ipairs(map.tileInstances[gid]) do
+					for _, instance in pairs(map.tileInstances[gid]) do
 						-- Every object in every instance of a tile
 						if tile.objectGroup then
-							for _, object in ipairs(tile.objectGroup.objects) do
+							for _, object in pairs(tile.objectGroup.objects) do
 								if object.properties.collidable == true then
 									local t = {
 										name       = object.name,
@@ -66,15 +67,15 @@ return {
 			end
 		end
 
-		for _, layer in ipairs(map.layers) do
+		for _, layer in pairs(map.layers) do
 			-- Entire layer
 			if layer.properties.collidable == true then
 				if layer.type == "tilelayer" then
-					for y, tiles in ipairs(layer.data) do
+					for y, tiles in pairs(layer.data) do
 						for x, tile in pairs(tiles) do
 
 							if tile.objectGroup then
-								for _, object in ipairs(tile.objectGroup.objects) do
+								for _, object in pairs(tile.objectGroup.objects) do
 									if object.properties.collidable == true then
 										local t = {
 											name       = object.name,
@@ -117,7 +118,7 @@ return {
 			-- individual collidable objects in a layer that is not "collidable"
 			-- or whole collidable objects layer
 		  if layer.type == "objectgroup" then
-				for _, obj in ipairs(layer.objects) do
+				for _, obj in pairs(layer.objects) do
 					if layer.properties.collidable == true or obj.properties.collidable == true then
 						if obj.shape == "rectangle" then
 							local t = {

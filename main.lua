@@ -57,35 +57,35 @@ end
 function love.mousepressed(x, y, button, istouch, presses)
 	loveframes.mousepressed(x, y, button, istouch, presses)
 	if loveframes.GetInputObject() == false and loveframes.GetCollisionCount() < 1 then
-		client.mousepressed()
+		client.mousepressed(x, y, button, istouch, presses)
 	end
 end
 
 function love.mousereleased(x, y, button, istouch, presses)
 	loveframes.mousereleased(x, y, button, istouch, presses)
-	client.mousereleased()
+	client.mousereleased(x, y, button, istouch, presses)
 end
 
 function love.mousemoved(x, y, dx, dy, istouch)
 	loveframes.mousemoved(x, y, dx, dy, istouch)
-	client.mousemoved()
+	client.mousemoved(x, y, dx, dy, istouch)
 end
 
 function love.wheelmoved(x, y)
 	loveframes.wheelmoved(x, y)
-	client.wheelmoved()
+	client.wheelmoved(x, y)
 end
 
 function love.keypressed(key, unicode)
 	loveframes.keypressed(key, unicode)
 	if not loveframes.GetInputObject() then
-		client.keypressed()
+		client.keypressed(key)
 	end
 end
 
 function love.keyreleased(key, unicode)
 	loveframes.keyreleased(key)
-	client.keyreleased()
+	client.keyreleased(key)
 end
 
 function love.textinput(text)
